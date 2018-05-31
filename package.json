@@ -14,7 +14,7 @@
     "stream",
     "streams"
   ],
-  "author": "Avital Oliver <avital@aoliver.org>",
+  "author": "Greg Kubisa <gkubisa@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git://github.com/teamwork/websocket-json-stream.git"
