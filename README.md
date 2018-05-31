@@ -1,18 +1,20 @@
 # WebSocketJSONStream
 
-Expose a WebSocket connection on the server with JSON-encoded strings as a stream.
+A nodejs stream wrapper for WebSocket connections.
 
 ## Usage
 
 ```js
-var WebSocket = require('ws');
-var wss = new WebSocket.Server({server: server});
-var WebSocketJSONStream = require('@teamwork/websocket-json-stream');
+const WebSocket = require('ws')
+const WebSocketJSONStream = require('@teamwork/websocket-json-stream')
 
-wss.on('connection', function(ws, req) {
-  var stream = new WebSocketJSONStream(ws)
+const stream = new WebSocketJSONStream(new WebSocket(url))
+// ...
 
-  // ...
-
-});
+new WebSocket.Server({ server }).on('connection', ws => {
+    const stream = new WebSocketJSONStream(ws)
+    // ...
+})
 ```
+
+See [example.js](./example.js) for a working usage example.
