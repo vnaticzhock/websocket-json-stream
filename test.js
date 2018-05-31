@@ -1,0 +1,216 @@
+const assert = require('chai').assert
+const http = require('http')
+const WebSocket = require('ws')
+const WebSocketJSONStream = require('./index')
+
+const handler = (done, code) => (...args) => {
+    try {
+        code(...args)
+        done()
+    } catch (e) {
+        done(e)
+    }
+}
+
+describe('WebSocketJSONStream', function () {
+    beforeEach(function (done) {
+        this.sockets = []
+        this.httpServer = http.createServer()
+        this.wsServer = new WebSocket.Server({ server: this.httpServer })
+        this.httpServer.listen(() => {
+            const address = this.httpServer.address()
+
+            this.url = `http://${address.address}:${address.port}`
+            this.connect(({ clientWebSocket, serverWebSocket }) => {
+                this.clientStream = new WebSocketJSONStream(this.clientWebSocket = clientWebSocket)
+                this.serverStream = new WebSocketJSONStream(this.serverWebSocket = serverWebSocket)
+                done()
+            })
+        })
+
+        this.connect = function (callback) {
+            const clientWebSocket = new WebSocket(this.url)
+
+            this.wsServer.once('connection', serverWebSocket => {
+                clientWebSocket.once('open', () =>
+                    callback({ clientWebSocket, serverWebSocket }))
+            })
+        }
+    })
+
+    afterEach(function (done) {
+        this.wsServer.close()
+        this.httpServer.close(done)
+    })
+
+    it('should send and receive messages', function (done) {
+        this.connect(({ clientWebSocket, serverWebSocket }) => {
+            const serverSentData = [ { a: 1 }, { b: 2 } ]
+            const clientSentData = [ { y: -1 }, { z: -2 } ]
+            const serverReceivedData = []
+            const clientReceivedData = []
+
+            serverSentData.forEach(data => this.serverStream.write(data))
+            clientSentData.forEach(data => this.clientStream.write(data))
+
+            this.serverStream.on('data', data => serverReceivedData.push(data))
+            this.clientStream.on('data', data => clientReceivedData.push(data))
+
+            this.clientStream.end()
+            this.clientStream.on('close', () => {
+                try {
+                    assert.deepEqual(serverReceivedData, clientSentData)
+                    assert.deepEqual(clientReceivedData, serverSentData)
+                    done()
+                } catch (e) {
+                    done(e)
+                }
+            })
+        })
+    })
+
+    it('should get clientStream close on clientStream.end()', function (done) {
+        this.clientStream.end()
+        this.clientStream.on('close', () => done())
+    })
+    it('should get clientStream close on serverStream.end()', function (done) {
+        this.serverStream.end()
+        this.clientStream.on('close', () => done())
+    })
+    it('should get serverStream close on clientStream.end()', function (done) {
+        this.clientStream.end()
+        this.serverStream.on('close', () => done())
+    })
+    it('should get serverStream close on serverStream.end()', function (done) {
+        this.serverStream.end()
+        this.serverStream.on('close', () => done())
+    })
+
+    it('should get clientStream close on clientStream.destroy()', function (done) {
+        this.clientStream.destroy()
+        this.clientStream.on('close', () => done())
+    })
+    it('should get clientStream close on serverStream.destroy()', function (done) {
+        this.serverStream.destroy()
+        this.clientStream.on('close', () => done())
+    })
+    it('should get serverStream close on clientStream.destroy()', function (done) {
+        this.clientStream.destroy()
+        this.serverStream.on('close', () => done())
+    })
+    it('should get serverStream close on serverStream.destroy()', function (done) {
+        this.serverStream.destroy()
+        this.serverStream.on('close', () => done())
+    })
+
+    it('should get clientStream finish on clientStream.end()', function (done) {
+        this.clientStream.end()
+        this.clientStream.on('finish', () => done())
+    })
+    it('should get serverStream finish on serverStream.end()', function (done) {
+        this.serverStream.end()
+        this.serverStream.on('finish', () => done())
+    })
+    it('should get serverStream end on clientStream.end()', function (done) {
+        this.clientStream.end()
+        this.serverStream.resume()
+        this.serverStream.on('end', () => done())
+    })
+    it('should get clientStream end on serverStream.end()', function (done) {
+        this.serverStream.end()
+        this.clientStream.resume()
+        this.clientStream.on('end', () => done())
+    })
+
+    it('should get clientStream error on clientWebSocket error', function (done) {
+        const error = new Error('test')
+        this.clientStream.once('error', handler(done, e => assert.strictEqual(e, error)))
+        this.clientWebSocket.emit('error', error)
+    })
+    it('should get serverStream error on serverWebSocket error', function (done) {
+        const error = new Error('test')
+        this.clientStream.once('error', handler(done, e => assert.strictEqual(e, error)))
+        this.clientWebSocket.emit('error', error)
+    })
+    it('should get clientStream error on clientStream.write invalid data (function)', function (done) {
+        this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.clientStream.write(function () {})
+    })
+    it('should get serverStream error on serverStream.write invalid data (function)', function (done) {
+        this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.serverStream.write(function () {})
+    })
+    it('should get clientStream error on clientStream.write invalid data (cyclic data)', function (done) {
+        const data = {}
+        data.a = data
+        this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.clientStream.write(data)
+    })
+    it('should get serverStream error on serverStream.write invalid data (cyclic data)', function (done) {
+        const data = {}
+        data.a = data
+        this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.serverStream.write(data)
+    })
+    it('should get clientStream error on serverWebSocket.send invalid data', function (done) {
+        this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.serverWebSocket.send('qwerty')
+    })
+    it('should get serverStream error on clientWebSocket.send invalid data', function (done) {
+        this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.clientWebSocket.send('qwerty')
+    })
+    it('should get clientStream error on clientStream.write after end', function (done) {
+        this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.clientStream.end()
+        this.clientStream.write({})
+    })
+    it('should get serverStream error on serverStream.write after end', function (done) {
+        this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.serverStream.end()
+        this.serverStream.write({})
+    })
+    it('should get clientStream error on clientStream.write, if clientWebSocket is closed', function (done) {
+        this.clientWebSocket.close()
+        this.clientWebSocket.on('close', () => {
+            this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+            this.clientStream.write({})
+        })
+    })
+    it('should get serverStream error on serverStream.write, if serverWebSocket is closed', function (done) {
+        this.serverWebSocket.close()
+        this.serverWebSocket.on('close', () => {
+            this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
+            this.serverStream.write({})
+        })
+    })
+
+    it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING', function (done) {
+        const clientWebSocket = new WebSocket(this.url)
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+
+        clientStream.on('close', () => done())
+        clientStream.destroy()
+    })
+    it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING and gets error', function (done) {
+        const clientWebSocket = new WebSocket('http://invalid-url:0')
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+
+        clientStream.on('error', () => null) // ignore invalid-url error
+        clientStream.on('close', () => done())
+        clientStream.destroy()
+    })
+    it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CLOSED', function (done) {
+        const clientWebSocket = new WebSocket(this.url)
+
+        clientWebSocket.on('open', () => {
+            clientWebSocket.close()
+            clientWebSocket.on('close', () => {
+                const clientStream = new WebSocketJSONStream(clientWebSocket)
+
+                clientStream.destroy()
+                done()
+            })
+        })
+    })
+})

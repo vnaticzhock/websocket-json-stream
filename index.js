@@ -1,32 +1,76 @@
-var util = require('util');
-var Duplex = require('stream').Duplex;
+const Duplex = require('stream').Duplex
+const WebSocket = require('ws')
 
-function WebSocketJSONStream(ws) {
-  // Make work with or without 'new'
-  if (!(this instanceof WebSocketJSONStream)) return new WebSocketJSONStream(ws);
-  Duplex.call(this, {objectMode: true});
-  this.ws = ws;
-  var self = this;
+module.exports = class WebSocketJSONStream extends Duplex {
+    constructor(ws) {
+        super({
+            objectMode: true,
+            allowHalfOpen: false
+        })
 
-  ws.on('message', function(msg) { self.push(JSON.parse(msg)); });
-  ws.on('close', function() {
-    self.push(null); // end readable stream
-    self.end(); // end writable stream
+        this.ws = ws;
 
-    self.emit('close');
-    self.emit('end');
-  });
+        this.ws.on('message', message => {
+            try {
+                this.push(JSON.parse(message))
+            } catch (error) {
+                this.emit('error', error)
+            }
+        })
 
-  this.on('error', function() { ws.close(); });
-  this.on('end', function() { ws.close(); });
-};
-util.inherits(WebSocketJSONStream, Duplex);
+        this.ws.on('close', () => {
+            this.push(null)
+            this.emit('close')
+        })
 
-WebSocketJSONStream.prototype._read = function() {};
-WebSocketJSONStream.prototype._write = function(msg, encoding, next) {
-  this.ws.send(JSON.stringify(msg));
-  next();
-};
+        this.ws.on('error', error => {
+            this.emit('error', error)
+        })
+    }
 
-module.exports = WebSocketJSONStream;
+    _read() {}
 
+    _write(object, encoding, callback) {
+        try {
+            const json = JSON.stringify(object)
+
+            if (typeof json === 'string') {
+                this.ws.send(json, callback)
+            } else {
+                callback(new Error('Can\'t convert the value to JSON'))
+            }
+        } catch (error) {
+            callback(error)
+        }
+    }
+
+    _final(callback) {
+        this._closeWebSocket(callback)
+    }
+
+    _destroy(error, callback) {
+        this._closeWebSocket(() => callback(error))
+    }
+
+    _closeWebSocket(callback) {
+        switch (this.ws.readyState) {
+            case WebSocket.CONNECTING:
+                this.ws.once('error', () => this._closeWebSocket(callback))
+                this.ws.once('open', () => this._closeWebSocket(callback))
+                break
+            case WebSocket.OPEN:
+                this.ws.once('close', () => process.nextTick(callback))
+                this.ws.close()
+                break
+            case WebSocket.CLOSING:
+                this.ws.once('close', () => callback())
+                break
+            case WebSocket.CLOSED:
+                process.nextTick(callback)
+                break
+            default:
+                process.nextTick(callback, new Error(`Unexpected readyState: ${this.ws.readyState}`))
+                break
+        }
+    }
+}
