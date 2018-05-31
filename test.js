@@ -14,7 +14,6 @@ const handler = (done, code) => (...args) => {
 
 describe('WebSocketJSONStream', function () {
     beforeEach(function (done) {
-        this.sockets = []
         this.httpServer = http.createServer()
         this.wsServer = new WebSocket.Server({ server: this.httpServer })
         this.httpServer.listen(() => {
@@ -183,6 +182,24 @@ describe('WebSocketJSONStream', function () {
             this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
             this.serverStream.write({})
         })
+    })
+    it('should get clientStream error when clientWebSocket is not open yet', function (done) {
+        const clientWebSocket = new WebSocket(this.url)
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+        let e = null
+
+        // Delay `done` to avoid afterEach failure.
+        clientWebSocket.on('open', handler(done, () => assert.instanceOf(e, Error)))
+        clientStream.on('error', error => e = error)
+        clientStream.write({})
+    })
+    it('should get clientStream error when clientWebSocket sends JSON-encoded null', function (done) {
+        this.clientStream.on('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.serverWebSocket.send('null')
+    })
+    it('should get clientStream error when clientWebSocket sends JSON-encoded undefined', function (done) {
+        this.clientStream.on('error', handler(done, e => assert.instanceOf(e, Error)))
+        this.serverWebSocket.send('undefined')
     })
 
     it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING', function (done) {

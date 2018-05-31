@@ -11,11 +11,19 @@ module.exports = class WebSocketJSONStream extends Duplex {
         this.ws = ws;
 
         this.ws.on('message', message => {
+            let value
+
             try {
-                this.push(JSON.parse(message))
+                value = JSON.parse(message)
             } catch (error) {
-                this.emit('error', error)
+                return this.emit('error', error)
             }
+
+            if (value == null) {
+                return this.emit('error', new Error('Can\'t JSON.parse the value'))
+            }
+
+            this.push(value)
         })
 
         this.ws.on('close', () => {
@@ -31,17 +39,19 @@ module.exports = class WebSocketJSONStream extends Duplex {
     _read() {}
 
     _write(object, encoding, callback) {
-        try {
-            const json = JSON.stringify(object)
+        let json
 
-            if (typeof json === 'string') {
-                this.ws.send(json, callback)
-            } else {
-                callback(new Error('Can\'t convert the value to JSON'))
-            }
+        try {
+            json = JSON.stringify(object)
         } catch (error) {
-            callback(error)
+            return callback(error)
         }
+
+        if (typeof json !== 'string') {
+            return callback(new Error('Can\'t JSON.stringify the value'))
+        }
+
+        this.ws.send(json, callback)
     }
 
     _final(callback) {
