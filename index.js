@@ -1,5 +1,6 @@
 const Duplex = require('stream').Duplex
 const WebSocket = require('ws')
+const noop = function () {}
 
 module.exports = class WebSocketJSONStream extends Duplex {
     constructor(ws) {
@@ -35,6 +36,14 @@ module.exports = class WebSocketJSONStream extends Duplex {
         this.ws.on('error', error => {
             this.emit('error', error)
         })
+
+        // Required by nodejs 6.X.X which does not support `_final`.
+        this.once('finish', () => this._closeWebSocket(noop))
+
+        // Required by nodejs 6.X.X which does not support `destroy`.
+        if (typeof this.destroy !== 'function') {
+            this.destroy = () => this._closeWebSocket(noop)
+        }
     }
 
     _read() {}
