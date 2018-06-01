@@ -112,6 +112,16 @@ describe('WebSocketJSONStream', function () {
         this.serverStream.end()
         this.clientStream.resume()
     })
+    it('should get serverStream end on serverStream.end()', function (done) {
+        this.serverStream.on('end', () => done())
+        this.serverStream.resume()
+        this.serverStream.end()
+    })
+    it('should get clientStream end on clientStream.end()', function (done) {
+        this.clientStream.on('end', () => done())
+        this.clientStream.resume()
+        this.clientStream.end()
+    })
 
     it('should get clientStream error on clientWebSocket error', function (done) {
         const error = new Error('test')
