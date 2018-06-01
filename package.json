@@ -1,6 +1,6 @@
 {
   "name": "@teamwork/websocket-json-stream",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "Expose WebSockets with JSON as an object stream",
   "main": "index.js",
   "scripts": {
