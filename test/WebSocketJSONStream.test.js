@@ -1,7 +1,7 @@
 const assert = require('chai').assert
 const http = require('http')
 const WebSocket = require('ws')
-const WebSocketJSONStream = require('./index')
+const WebSocketJSONStream = require('..')
 
 const handler = (done, code) => (...args) => {
     try {

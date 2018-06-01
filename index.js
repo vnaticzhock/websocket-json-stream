@@ -78,6 +78,7 @@ module.exports = class WebSocketJSONStream extends Duplex {
             case WebSocket.CLOSED:
                 process.nextTick(callback)
                 break
+            /* istanbul ignore next */
             default:
                 process.nextTick(callback, new Error(`Unexpected readyState: ${this.ws.readyState}`))
                 break
