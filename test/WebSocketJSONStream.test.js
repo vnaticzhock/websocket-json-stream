@@ -125,11 +125,11 @@ describe('WebSocketJSONStream', function () {
     })
     it('should get clientStream error on clientStream.write invalid data (Symbol)', function (done) {
         this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
-        this.clientStream.write(Symbol())
+        this.clientStream.write(Symbol('Test'))
     })
     it('should get serverStream error on serverStream.write invalid data (Symbol)', function (done) {
         this.serverStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
-        this.serverStream.write(Symbol())
+        this.serverStream.write(Symbol('Test'))
     })
     it('should get clientStream error on clientStream.write invalid data (cyclic data)', function (done) {
         const data = {}
