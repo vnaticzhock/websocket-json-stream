@@ -5,7 +5,8 @@ module.exports = class WebSocketJSONStream extends Duplex {
     constructor(ws) {
         super({
             objectMode: true,
-            allowHalfOpen: false
+            allowHalfOpen: false,
+            emitClose: false
         })
 
         this.ws = ws;
@@ -69,7 +70,7 @@ module.exports = class WebSocketJSONStream extends Duplex {
                 this.ws.once('open', () => this._closeWebSocket(callback))
                 break
             case WebSocket.OPEN:
-                this.ws.once('close', () => process.nextTick(callback))
+                this.ws.once('close', () => callback())
                 this.ws.close()
                 break
             case WebSocket.CLOSING:
