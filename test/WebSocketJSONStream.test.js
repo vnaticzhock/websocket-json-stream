@@ -43,29 +43,22 @@ describe('WebSocketJSONStream', function () {
     })
 
     it('should send and receive messages', function (done) {
-        this.connect(({ clientWebSocket, serverWebSocket }) => {
-            const serverSentData = [ { a: 1 }, { b: 2 } ]
-            const clientSentData = [ { y: -1 }, { z: -2 } ]
-            const serverReceivedData = []
-            const clientReceivedData = []
+        const serverSentData = [ { a: 1 }, { b: 2 } ]
+        const clientSentData = [ { y: -1 }, { z: -2 } ]
+        const serverReceivedData = []
+        const clientReceivedData = []
 
-            serverSentData.forEach(data => this.serverStream.write(data))
-            clientSentData.forEach(data => this.clientStream.write(data))
+        serverSentData.forEach(data => this.serverStream.write(data))
+        clientSentData.forEach(data => this.clientStream.write(data))
 
-            this.serverStream.on('data', data => serverReceivedData.push(data))
-            this.clientStream.on('data', data => clientReceivedData.push(data))
+        this.serverStream.on('data', data => serverReceivedData.push(data))
+        this.clientStream.on('data', data => clientReceivedData.push(data))
 
-            this.clientStream.end()
-            this.clientStream.on('close', () => {
-                try {
-                    assert.deepEqual(serverReceivedData, clientSentData)
-                    assert.deepEqual(clientReceivedData, serverSentData)
-                    done()
-                } catch (e) {
-                    done(e)
-                }
-            })
-        })
+        this.clientStream.end()
+        this.clientStream.on('close', handler(done, () => {
+            assert.deepEqual(serverReceivedData, clientSentData)
+            assert.deepEqual(clientReceivedData, serverSentData)
+        }))
     })
 
     it('should get clientStream close on clientStream.end()', function (done) {
