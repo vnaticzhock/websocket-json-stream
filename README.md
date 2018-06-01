@@ -1,5 +1,9 @@
 # WebSocketJSONStream
 
+[![NPM module](https://img.shields.io/npm/v/@teamwork/websocket-json-stream.svg)](https://www.npmjs.com/package/@teamwork/websocket-json-stream)
+[![Build Status](https://travis-ci.org/Teamwork/websocket-json-stream.svg?branch=master)](https://travis-ci.org/Teamwork/websocket-json-stream)
+[![Coverage Status](https://coveralls.io/repos/github/Teamwork/websocket-json-stream/badge.svg)](https://coveralls.io/github/Teamwork/websocket-json-stream)
+
 A nodejs stream wrapper for WebSocket connections.
 
 ## Usage
