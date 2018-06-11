@@ -1,6 +1,6 @@
 # WebSocketJSONStream
 
-[![NPM module](https://img.shields.io/npm/v/@teamwork/websocket-json-stream.svg)](https://www.npmjs.com/package/@teamwork/websocket-json-stream)
+[![npm version](https://badge.fury.io/js/%40teamwork%2Fwebsocket-json-stream.svg)](https://badge.fury.io/js/%40teamwork%2Fwebsocket-json-stream)
 [![Build Status](https://travis-ci.org/Teamwork/websocket-json-stream.svg?branch=master)](https://travis-ci.org/Teamwork/websocket-json-stream)
 [![Coverage Status](https://coveralls.io/repos/github/Teamwork/websocket-json-stream/badge.svg)](https://coveralls.io/github/Teamwork/websocket-json-stream)
 
