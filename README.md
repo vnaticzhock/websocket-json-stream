@@ -49,7 +49,7 @@ Calling `stream.destroy()` without an error object will close the stream without
 
 ```javascript
 const stream = new WebSocketJSONStream(ws)
-// Closes WebSocket with the code 1005 and the reason ''
+// Closes WebSocket with no status code (1005) and the reason ''
 stream.destroy()
 ```
 
