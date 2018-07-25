@@ -46,6 +46,7 @@ module.exports = class WebSocketJSONStream extends Duplex {
         // Required by nodejs 6.X.X which does not support `_final`.
         this.once('finish', () => this._closeOnStreamEnd(noop))
 
+        /* istanbul ignore next */
         // Required by nodejs 6.X.X which does not support `destroy`.
         if (typeof this.destroy !== 'function') {
             this.destroy = destroy
