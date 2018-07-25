@@ -22,3 +22,49 @@ new WebSocket.Server({ server }).on('connection', ws => {
 ```
 
 See [example.js](./example.js) for a working usage example.
+
+## Closing a WebSocket via its stream
+
+Calling [`stream.end()`](https://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback) or [`stream.destroy()`](https://nodejs.org/api/stream.html#stream_writable_destroy_error) will close the WebSocket connection.
+
+When a WebSocket is closed either by the server or the client, a [`CloseEvent`](https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent) will be emmitted. CloseEvents have both a numeric `code` and a string `reason` property that may be used to indicate the type of closure.
+
+### `stream.end()`
+
+Calling `stream.end()` will close the WebSocket with the code `1000` and reason `'stream end'`. 1000 indicates a normal closure, meaning that the purpose for which the connection was established has been fulfilled. (https://tools.ietf.org/html/rfc6455#section-7.4.1) The code `1000` may also be used when calling the [`webSocket.close(code)`](https://html.spec.whatwg.org/multipage/web-sockets.html#dom-websocket-close) method of WebSockets in browsers.
+
+Clients may implement this to mean that the server is closing the stream intentionally, and the client should not automatically reconnect.
+
+### `stream.destroy([error])`
+
+Calling `stream.destroy()` **without** an error object will close the stream without a code. This results in the client emitting a CloseEvent that has code 1005. 1005 is a reserved value and MUST NOT be set as a status code in a Close control frame by an endpoint. It is designated for use in applications expecting a status code to indicate that no status code was actually present. (https://tools.ietf.org/html/rfc6455#section-7.4.1) Calling `webSocket.close()` with no arguments will produce a CloseEvent with the code `1005`. A reason string cannot be provided together with the code `1005`.
+
+Calling `stream.destroy(error)` **with** an error will emit an `'error'` event and close the stream with the code `1011` and reason `'stream error'` by default. 1011 indicates that a remote endpoint is terminating the connection because it encountered an unexpected condition that prevented it from fulfilling the request. (http://www.rfc-editor.org/errata_search.php?eid=3227) The code `1011` cannot be used when calling the `webSocket.close(code)` method of WebSockets in browsers.
+
+Custom close code and reason values may be sent by setting `error.closeCode` or `error.closeReason` properties on the error argument passed to `stream.destroy(error)`. For example:
+
+```javascript
+const stream = new WebSocketJSONStream(ws)
+stream.on('error', (error) => {
+  // Error event must be handled, or it will be throw when calling
+  // stream.destroy() with an error argument
+})
+
+// Example of extending from Error and adding additional properties
+class CustomStreamError extends Error {
+    constructor(message) {
+        super(message)
+        this.name = this.constructor.name
+        Error.captureStackTrace(this, this.constructor)
+        this.closeCode = null
+        this.closeReason = null
+    }
+}
+
+// Closes WebSocket with the code 4000 and the reason 'custom reason'.
+// error.message is not sent to the client
+const error = new CustomStreamError('Example error')
+error.closeCode = 4000
+error.closeReason = 'custom reason'
+stream.destroy(error)
+```
