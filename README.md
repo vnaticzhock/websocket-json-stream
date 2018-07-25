@@ -27,7 +27,7 @@ See [example.js](./example.js) for a working usage example.
 
 Calling [`stream.end()`](https://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback) or [`stream.destroy()`](https://nodejs.org/api/stream.html#stream_writable_destroy_error) will close the WebSocket connection.
 
-When a WebSocket is closed either by the server or the client, a [`CloseEvent`](https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent) will be emmitted. CloseEvents have both a numeric `code` and a string `reason` property that may be used to indicate the type of closure.
+When a WebSocket is closed either by the server or the client, a [`CloseEvent`](https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent) will be emitted. CloseEvents have both a numeric `code` and a string `reason` property that may be used to indicate the type of closure.
 
 ### `stream.end()`
 
