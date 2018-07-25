@@ -6,8 +6,9 @@ const INTERNAL_ERROR_CODE = 1011
 const CUSTOM_CODE = 4000
 
 module.exports = function() {
-    ['clientWebSocket', 'serverWebSocket'].forEach(webSocketName => {
-        describe(webSocketName + ' CloseEvent', function () {
+    [ 'clientWebSocket', 'serverWebSocket' ].forEach(webSocketName => {
+        /* eslint no-invalid-this: "off" */
+        describe(`${webSocketName} CloseEvent`, function () {
             it('is emitted with code 1000 and reason "stream end" on clientStream.end()', function (done) {
                 this[webSocketName].addEventListener('close', event => {
                     assert.equal(event.code, NORMAL_CLOSURE_CODE)
@@ -102,7 +103,7 @@ module.exports = function() {
             })
         })
 
-        describe(webSocketName + ' "close" event', function () {
+        describe(`${webSocketName} "close" event`, function () {
             it('is emitted with code 1000 and reason "stream end" on clientStream.end()', function (done) {
                 this[webSocketName].on('close', (code, reason) => {
                     assert.equal(code, NORMAL_CLOSURE_CODE)
@@ -156,7 +157,7 @@ module.exports = function() {
                 this.serverStream.destroy(error)
             })
             it('is emitted with code from error.closeCode on clientStream.destroy(error)', function (done) {
-                this[webSocketName].on('close', (code) => {
+                this[webSocketName].on('close', code => {
                     assert.equal(code, CUSTOM_CODE)
                     done()
                 })
@@ -166,7 +167,7 @@ module.exports = function() {
                 this.clientStream.destroy(error)
             })
             it('is emitted with code from error.closeCode on serverStream.destroy(error)', function (done) {
-                this[webSocketName].on('close', (code) => {
+                this[webSocketName].on('close', code => {
                     assert.equal(code, CUSTOM_CODE)
                     done()
                 })
