@@ -3,7 +3,6 @@
 
 'use strict';
 
-/* istanbul ignore next */
 // undocumented cb() API, needed for core, not for public API
 function destroy(err, cb) {
   const readableDestroyed = this._readableState &&
@@ -50,13 +49,11 @@ function destroy(err, cb) {
   return this;
 }
 
-/* istanbul ignore next */
 function emitErrorAndCloseNT(self, err) {
   emitErrorNT(self, err);
   emitCloseNT(self);
 }
 
-/* istanbul ignore next */
 function emitCloseNT(self) {
   if (self._writableState && !self._writableState.emitClose)
     return;
@@ -65,7 +62,6 @@ function emitCloseNT(self) {
   self.emit('close');
 }
 
-/* istanbul ignore next */
 function emitErrorNT(self, err) {
   self.emit('error', err);
 }
