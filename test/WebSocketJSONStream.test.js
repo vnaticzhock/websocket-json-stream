@@ -2,6 +2,7 @@ const assert = require('chai').assert
 const http = require('http')
 const WebSocket = require('ws')
 const WebSocketJSONStream = require('..')
+const testCloseStatus = require('./close-status')
 
 const handler = (done, code) => (...args) => {
     try {
@@ -228,4 +229,6 @@ describe('WebSocketJSONStream', function () {
         })
         clientWebSocket.on('open', () => clientWebSocket.close())
     })
+
+    testCloseStatus()
 })
