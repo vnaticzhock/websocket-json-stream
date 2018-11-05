@@ -1,3 +1,10 @@
+# 1.1.1
+
+## Non-Breaking Changes
+
+- Updated dependencies.
+
+
 # 1.1.0
 
 ## Non-Breaking Changes
