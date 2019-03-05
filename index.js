@@ -1,5 +1,9 @@
 const { Duplex } = require('stream')
-const WebSocket = require('ws')
+
+const CONNECTING = 0
+const OPEN = 1
+const CLOSING = 2
+const CLOSED = 3
 
 const NORMAL_CLOSURE_CODE = 1000
 const NORMAL_CLOSURE_REASON = 'stream end'
@@ -15,11 +19,11 @@ module.exports = class WebSocketJSONStream extends Duplex {
 
         this.ws = ws;
 
-        this.ws.on('message', message => {
+        this.ws.addEventListener('message', ({ data }) => {
             let value
 
             try {
-                value = JSON.parse(message)
+                value = JSON.parse(data)
             } catch (error) {
                 return this.destroy(error)
             }
@@ -31,7 +35,7 @@ module.exports = class WebSocketJSONStream extends Duplex {
             this.push(value)
         })
 
-        this.ws.on('close', () => {
+        this.ws.addEventListener('close', () => {
             this.destroy()
         })
     }
@@ -51,7 +55,26 @@ module.exports = class WebSocketJSONStream extends Duplex {
             return callback(new Error('Can\'t JSON.stringify the value'))
         }
 
-        this.ws.send(json, callback)
+        this._send(json, callback)
+    }
+
+    _send(json, callback) {
+        if (this.ws.readyState === CONNECTING) {
+            const send = () => {
+                this.ws.removeEventListener('open', send)
+                this.ws.removeEventListener('close', send)
+                this._send(json, callback)
+            }
+            this.ws.addEventListener('open', send)
+            this.ws.addEventListener('close', send)
+
+        } else if (this.ws.readyState === OPEN) {
+            this.ws.send(json, callback)
+        } else {
+            const error = new Error('WebSocket CLOSING or CLOSED.')
+            error.name = 'Error [ERR_CLOSED]'
+            callback(error)
+        }
     }
 
     _final(callback) {
@@ -95,24 +118,42 @@ module.exports = class WebSocketJSONStream extends Duplex {
 
     _closeWebSocket(code, reason, callback) {
         switch (this.ws.readyState) {
-            case WebSocket.CONNECTING:
-                this.ws.once('open', () => this._closeWebSocket(code, reason, callback))
-                this.ws.once('close', () => this._closeWebSocket(code, reason, callback))
+            case CONNECTING: {
+                const close = () => {
+                    this.ws.removeEventListener('open', close)
+                    this.ws.removeEventListener('close', close)
+                    this._closeWebSocket(code, reason, callback)
+                }
+                this.ws.addEventListener('open', close)
+                this.ws.addEventListener('close', close)
                 break
-            case WebSocket.OPEN:
-                this.ws.once('close', () => callback())
+            }
+            case OPEN: {
+                const closed = () => {
+                    this.ws.removeEventListener('close', closed)
+                    callback()
+                }
+                this.ws.addEventListener('close', closed)
                 this.ws.close(code, reason)
                 break
-            case WebSocket.CLOSING:
-                this.ws.once('close', () => callback())
+            }
+            case CLOSING: {
+                const closed = () => {
+                    this.ws.removeEventListener('close', closed)
+                    callback()
+                }
+                this.ws.addEventListener('close', closed)
                 break
-            case WebSocket.CLOSED:
+            }
+            case CLOSED: {
                 process.nextTick(callback)
                 break
+            }
             /* istanbul ignore next */
-            default:
+            default: {
                 process.nextTick(() => callback(new Error(`Unexpected readyState: ${this.ws.readyState}`)))
                 break
+            }
         }
     }
 }

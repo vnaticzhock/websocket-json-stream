@@ -156,16 +156,6 @@ describe('WebSocketJSONStream', function () {
         })
         this.serverWebSocket.close()
     })
-    it('should get clientStream error when clientWebSocket is not open yet', function (done) {
-        const clientWebSocket = new WebSocket(this.url)
-        const clientStream = new WebSocketJSONStream(clientWebSocket)
-        let e = null
-
-        // Delay `done` to avoid afterEach failure.
-        clientWebSocket.on('open', handler(done, () => assert.instanceOf(e, Error)))
-        clientStream.on('error', error => e = error)
-        clientStream.write({})
-    })
     it('should get clientStream error when clientWebSocket sends JSON-encoded null', function (done) {
         this.clientStream.on('error', handler(done, e => assert.instanceOf(e, Error)))
         this.serverWebSocket.send('null')
@@ -215,6 +205,53 @@ describe('WebSocketJSONStream', function () {
             done()
         })
         clientWebSocket.on('open', () => clientWebSocket.close())
+    })
+    it('write when clientWebSocket.readyState === WebSocket.CONNECTING', function (done) {
+        const clientWebSocket = new WebSocket(this.url)
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+        let opened = false
+
+        clientWebSocket.on('open', () => {
+            opened = true
+        })
+        clientStream.write({}, handler(done, error => {
+            assert.ok(error == null)
+            assert.ok(opened)
+        }))
+    })
+    it('write when clientWebSocket.readyState === WebSocket.CONNECTING and gets error', function (done) {
+        const clientWebSocket = new WebSocket('http://invalid-url:0')
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+        let closed = false
+
+        clientStream.on('error', error => {
+            assert.ok(error instanceof Error)
+            assert.equal(error.name, 'Error [ERR_CLOSED]')
+            assert.equal(error.message, 'WebSocket CLOSING or CLOSED.')
+        })
+        clientWebSocket.on('error', () => null) // ignore invalid-url error
+        clientWebSocket.on('close', () => {
+            closed = true
+        })
+        clientStream.write({}, handler(done, error => {
+            assert.ok(error instanceof Error)
+            assert.equal(error.name, 'Error [ERR_CLOSED]')
+            assert.equal(error.message, 'WebSocket CLOSING or CLOSED.')
+            assert.ok(closed)
+        }))
+    })
+    it('write when clientWebSocket.readyState === WebSocket.CLOSING', function (done) {
+        this.clientWebSocket.close()
+        this.clientStream.on('error', error => {
+            assert.ok(error instanceof Error)
+            assert.equal(error.name, 'Error [ERR_CLOSED]')
+            assert.equal(error.message, 'WebSocket CLOSING or CLOSED.')
+        })
+        this.clientStream.write({}, handler(done, error => {
+            assert.ok(error instanceof Error)
+            assert.equal(error.name, 'Error [ERR_CLOSED]')
+            assert.equal(error.message, 'WebSocket CLOSING or CLOSED.')
+        }))
     })
 
     testCloseStatus()
