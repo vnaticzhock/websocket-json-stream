@@ -103,37 +103,7 @@ describe('WebSocketJSONStream', function () {
         this.serverStream.on('finish', () => done())
         this.serverStream.end()
     })
-    it('should get serverStream end on clientStream.end()', function (done) {
-        this.serverStream.on('end', () => done())
-        this.clientStream.end()
-        this.serverStream.resume()
-    })
-    it('should get clientStream end on serverStream.end()', function (done) {
-        this.clientStream.on('end', () => done())
-        this.serverStream.end()
-        this.clientStream.resume()
-    })
-    it('should get serverStream end on serverStream.end()', function (done) {
-        this.serverStream.on('end', () => done())
-        this.serverStream.resume()
-        this.serverStream.end()
-    })
-    it('should get clientStream end on clientStream.end()', function (done) {
-        this.clientStream.on('end', () => done())
-        this.clientStream.resume()
-        this.clientStream.end()
-    })
 
-    it('should get clientStream error on clientWebSocket error', function (done) {
-        const error = new Error('test')
-        this.clientStream.once('error', handler(done, e => assert.strictEqual(e, error)))
-        this.clientWebSocket.emit('error', error)
-    })
-    it('should get serverStream error on serverWebSocket error', function (done) {
-        const error = new Error('test')
-        this.clientStream.once('error', handler(done, e => assert.strictEqual(e, error)))
-        this.clientWebSocket.emit('error', error)
-    })
     it('should get clientStream error on clientStream.write invalid data (Symbol)', function (done) {
         this.clientStream.once('error', handler(done, e => assert.instanceOf(e, Error)))
         this.clientStream.write(Symbol('Test'))
@@ -205,22 +175,39 @@ describe('WebSocketJSONStream', function () {
         this.serverWebSocket.send('undefined')
     })
 
-    it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING', function (done) {
+    it('clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING', function (done) {
         const clientWebSocket = new WebSocket(this.url)
         const clientStream = new WebSocketJSONStream(clientWebSocket)
 
-        clientStream.on('close', () => done())
+        clientStream.once('close', () => done())
         clientStream.destroy()
     })
-    it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING and gets error', function (done) {
+    it('clientStream.destroy when clientWebSocket.readyState === WebSocket.CONNECTING and gets error', function (done) {
         const clientWebSocket = new WebSocket('http://invalid-url:0')
         const clientStream = new WebSocketJSONStream(clientWebSocket)
 
-        clientStream.on('error', () => null) // ignore invalid-url error
+        clientWebSocket.on('error', () => null) // ignore invalid-url error
         clientStream.on('close', () => done())
         clientStream.destroy()
     })
-    it('should not crash on clientStream.destroy when clientWebSocket.readyState === WebSocket.CLOSED', function (done) {
+    it('clientStream.destroy when clientWebSocket.readyState === WebSocket.OPEN', function (done) {
+        const clientWebSocket = new WebSocket(this.url)
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+
+        clientWebSocket.on('close', () => done())
+        clientWebSocket.on('open', () => clientStream.destroy())
+    })
+    it('clientStream.destroy when clientWebSocket.readyState === WebSocket.CLOSING', function (done) {
+        const clientWebSocket = new WebSocket(this.url)
+        const clientStream = new WebSocketJSONStream(clientWebSocket)
+
+        clientWebSocket.on('close', () => done())
+        clientWebSocket.on('open', () => {
+            clientWebSocket.close()
+            clientStream.destroy()
+        })
+    })
+    it('clientStream.destroy when clientWebSocket.readyState === WebSocket.CLOSED', function (done) {
         const clientWebSocket = new WebSocket(this.url)
 
         clientWebSocket.on('close', () => {

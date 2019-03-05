@@ -1,7 +1,5 @@
-const Duplex = require('stream').Duplex
+const { Duplex } = require('stream')
 const WebSocket = require('ws')
-const destroy = require('./destroy').destroy
-const noop = function () {}
 
 const NORMAL_CLOSURE_CODE = 1000
 const NORMAL_CLOSURE_REASON = 'stream end'
@@ -12,8 +10,7 @@ module.exports = class WebSocketJSONStream extends Duplex {
     constructor(ws) {
         super({
             objectMode: true,
-            allowHalfOpen: false,
-            emitClose: false
+            allowHalfOpen: false
         })
 
         this.ws = ws;
@@ -24,33 +21,19 @@ module.exports = class WebSocketJSONStream extends Duplex {
             try {
                 value = JSON.parse(message)
             } catch (error) {
-                return this.emit('error', error)
+                return this.destroy(error)
             }
 
             if (value == null) {
-                return this.emit('error', new Error('Can\'t JSON.parse the value'))
+                return this.destroy(new Error('Can\'t JSON.parse the value'))
             }
 
             this.push(value)
         })
 
         this.ws.on('close', () => {
-            this.push(null)
-            this.emit('close')
+            this.destroy()
         })
-
-        this.ws.on('error', error => {
-            this.emit('error', error)
-        })
-
-        // Required by nodejs 6.X.X which does not support `_final`.
-        this.once('finish', () => this._closeOnStreamEnd(noop))
-
-        // Required by nodejs 6.X.X which does not support `destroy`.
-        /* istanbul ignore if */
-        if (typeof this.destroy !== 'function') {
-            this.destroy = destroy
-        }
     }
 
     _read() {}
@@ -72,7 +55,12 @@ module.exports = class WebSocketJSONStream extends Duplex {
     }
 
     _final(callback) {
-        this._closeOnStreamEnd(callback)
+        /*
+         * 1000 indicates a normal closure, meaning that the purpose for which
+         * the connection was established has been fulfilled.
+         * https://tools.ietf.org/html/rfc6455#section-7.4.1
+         */
+        this._closeWebSocket(NORMAL_CLOSURE_CODE, NORMAL_CLOSURE_REASON, callback)
     }
 
     _destroy(error, callback) {
@@ -105,21 +93,11 @@ module.exports = class WebSocketJSONStream extends Duplex {
         this._closeWebSocket(code, reason, () => callback(error))
     }
 
-    _closeOnStreamEnd(callback) {
-
-        /*
-         * 1000 indicates a normal closure, meaning that the purpose for which
-         * the connection was established has been fulfilled.
-         * https://tools.ietf.org/html/rfc6455#section-7.4.1
-         */
-        this._closeWebSocket(NORMAL_CLOSURE_CODE, NORMAL_CLOSURE_REASON, callback)
-    }
-
     _closeWebSocket(code, reason, callback) {
         switch (this.ws.readyState) {
             case WebSocket.CONNECTING:
-                this.ws.once('error', () => this._closeWebSocket(code, reason, callback))
                 this.ws.once('open', () => this._closeWebSocket(code, reason, callback))
+                this.ws.once('close', () => this._closeWebSocket(code, reason, callback))
                 break
             case WebSocket.OPEN:
                 this.ws.once('close', () => callback())
