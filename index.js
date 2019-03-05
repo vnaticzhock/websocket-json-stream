@@ -14,9 +14,11 @@ module.exports = class WebSocketJSONStream extends Duplex {
     constructor(ws) {
         super({
             objectMode: true,
-            allowHalfOpen: false
+            allowHalfOpen: false,
+            emitClose: false
         })
 
+        this._emittedClose = false
         this.ws = ws;
 
         this.ws.addEventListener('message', ({ data }) => {
@@ -133,7 +135,7 @@ module.exports = class WebSocketJSONStream extends Duplex {
             case OPEN: {
                 const closed = () => {
                     this.ws.removeEventListener('close', closed)
-                    callback()
+                    this._closeWebSocket(code, reason, callback)
                 }
                 this.ws.addEventListener('close', closed)
                 this.ws.close(code, reason)
@@ -142,13 +144,19 @@ module.exports = class WebSocketJSONStream extends Duplex {
             case CLOSING: {
                 const closed = () => {
                     this.ws.removeEventListener('close', closed)
-                    callback()
+                    this._closeWebSocket(code, reason, callback)
                 }
                 this.ws.addEventListener('close', closed)
                 break
             }
             case CLOSED: {
-                process.nextTick(callback)
+                process.nextTick(() => {
+                    callback()
+                    if (!this._emittedClose) {
+                        this._emittedClose = true
+                        this.emit('close')
+                    }
+                })
                 break
             }
             /* istanbul ignore next */
