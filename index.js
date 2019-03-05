@@ -151,11 +151,12 @@ module.exports = class WebSocketJSONStream extends Duplex {
             }
             case CLOSED: {
                 process.nextTick(() => {
-                    callback()
                     if (!this._emittedClose) {
                         this._emittedClose = true
                         this.emit('close')
                     }
+
+                    return callback()
                 })
                 break
             }
