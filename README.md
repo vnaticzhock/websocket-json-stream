@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/Teamwork/websocket-json-stream.svg?branch=master)](https://travis-ci.org/Teamwork/websocket-json-stream)
 [![Coverage Status](https://coveralls.io/repos/github/Teamwork/websocket-json-stream/badge.svg)](https://coveralls.io/github/Teamwork/websocket-json-stream)
 
-A nodejs stream wrapper for WebSocket connections.
+A nodejs stream wrapper for WebSocket connections. It works with browser WebSockets too.
 
 ## Usage
 
@@ -22,6 +22,12 @@ new WebSocket.Server({ server }).on('connection', ws => {
 ```
 
 See [example.js](./example.js) for a working usage example.
+
+## Error Handling
+
+WebSocket error events are not handled by this module, so you should handle them yourself to avoid crashing the process unnecessarily in nodejs.
+
+When writing to a stream when its associated WebSocket is already CLOSING or CLOSED, the stream emits an error event with the `name` property value equal to `Error [ERR_CLOSED]`.
 
 ## Closing a WebSocket via its stream
 
