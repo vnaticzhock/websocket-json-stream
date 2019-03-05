@@ -73,11 +73,13 @@ module.exports = class WebSocketJSONStream extends Duplex {
         } else {
             const error = new Error('WebSocket CLOSING or CLOSED.')
             error.name = 'Error [ERR_CLOSED]'
-            callback(error)
+
+            return callback(error)
         }
     }
 
     _final(callback) {
+
         /*
          * 1000 indicates a normal closure, meaning that the purpose for which
          * the connection was established has been fulfilled.
